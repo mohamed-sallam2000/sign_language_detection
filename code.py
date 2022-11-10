@@ -1,3 +1,7 @@
+
+###in cmd type
+#pip install tensorflow==2.8.1 tensorflow-gpu==2.8.1 opencv-python mediapipe sklearn matplotlib
+########################
 import cv2
 import numpy as np
 import os
