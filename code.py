@@ -1,18 +1,14 @@
-
-###in cmd type
-#pip install tensorflow==2.8.1 tensorflow-gpu==2.8.1 opencv-python mediapipe sklearn matplotlib
-########################
 import cv2
 import numpy as np
 import os
 from matplotlib import pyplot as plt
-import time
+
 import mediapipe as mp
 from tensorflow import keras
-from keras import Sequential
+from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
-from keras import utils
+
 from keras.utils.np_utils import to_categorical
 
 from keras.callbacks import TensorBoard
@@ -117,7 +113,7 @@ sequence_length = 30
 start_folder = 0
 for action in actions: 
   #  dirmax=np.max(np.array(os.listdir(os.path.join(DATA_PATH, action))).astype(int))
-    for sequence in range(0,no_sequences+1):
+    for sequence in range(0,no_sequences):
         try: 
             os.makedirs(os.path.join(DATA_PATH, action, str(sequence)))#i delete +dirmax
         except:
@@ -184,10 +180,16 @@ for action in actions:
             window.append(res)
         sequences.append(window)
         labels.append(label_map[action])
+np.array(sequences).shape
+np.array(labels).shape
+
 X = np.array(sequences)
+X.shape
+
 y = to_categorical(labels).astype(int)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05)
+y_test.shape
 
 log_dir = os.path.join('Logs')
 tb_callback = TensorBoard(log_dir=log_dir)
@@ -198,15 +200,15 @@ model.add(LSTM(64, return_sequences=False, activation='relu'))
 model.add(Dense(64, activation='relu'))
 model.add(Dense(32, activation='relu'))
 model.add(Dense(actions.shape[0], activation='softmax'))
-model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
-model.fit(X_train, y_train, epochs=2000, callbacks=[tb_callback])
+#model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
+#model.fit(X_train, y_train, epochs=2000, callbacks=[tb_callback])
 model.summary()
 res = model.predict(X_test)
 actions[np.argmax(res[4])]
 actions[np.argmax(y_test[4])]
 model.save('action.h5')
-#del model
-model.load_weights('action.h5')
+#del modelq
+model.load_weights('action1.h5')
 ##########################
 from sklearn.metrics import multilabel_confusion_matrix, accuracy_score
 yhat = model.predict(X_test)
