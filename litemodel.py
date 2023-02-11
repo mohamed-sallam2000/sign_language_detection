@@ -1,21 +1,20 @@
 
 import cv2
-#import serial
+import serial
 import numpy as np
+import threading
 import tensorflow as tf
-#from matplotlib import pyplot as plt
+
 import mediapipe as mp
-#from tensorflow import keras
-#from tensorflow.keras.utils.np_utils import to_categorical
-#from tensorflow.keras.callbacks import TensorBoard
-from tensorflow.keras.models import load_model
-    
+
+import threading
 from qtpy.QtWidgets import QApplication, QLabel, QWidget, QPushButton
 from qtpy.QtGui import QImage, QPixmap
 from qtpy.QtCore import QTimer
+import multiprocessing
 actions = np.array(['مرحبا ', 'thanks'])
 mp_holistic = mp.solutions.holistic
-model = load_model('twoexp.h5',compile=False)
+#model = load_model('twoexp.h5',compile=False)
 sequence = []
 sentence = []
 predictions = []
@@ -29,7 +28,6 @@ interpreter = tf.lite.Interpreter(model_path="twoexp.tflite")
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
-#ser=serial.Serial('COM6', 9600, timeout=1)
 #mic==label 3
 #door =window red background
 def mediapipe_detection(image, model):
@@ -54,7 +52,7 @@ app = QApplication([])
 window = QWidget()
 window.width()
 window.height()
-#window.size()getter
+
 window.setStyleSheet("background-color: white;")
 alarm_window=QWidget()
 alarm_window.resize(1366,768)
@@ -81,7 +79,7 @@ label_alarm.setGeometry(0, 0, frame_width, frame_height)
 mic_label = QLabel(window)
 mic_label.setGeometry(600, 480, 100, 100)
 mic_label.setStyleSheet("background-color: white; color: black;")
-mic_label.show()
+
 def update_timer_label():
     global time_var
     time_var += 1
@@ -121,30 +119,93 @@ off_button=QPushButton("off",window)
 off_button.setGeometry(800, 650, 300, 80)
 off_button.setStyleSheet("background-color: white ; color: black;")
 start_button.clicked.connect(timer.start)
-with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-    while cap.isOpened():
-        ''' data =str(ser.readline())[2:-5]
-        print(data)
-        if 'i'in data:
-            x=1
-    # Capture frame-by-frame
-        if x==1:
-            label_alarm.setText("alarm")
+#window.show()
+def model_thread():
+    sequence = []
+    sentence = []
+    predictions = []
+    threshold = 0.5#نسبه  
+    interval =30
+    with mp_holistic.Holistic() as holistic:
+        while cap.isOpened():
+
+        
+            
+        
+            ret, frame = cap.read()
+        
+
+            image, results = mediapipe_detection(frame, holistic)
+            keypoints = extract_keypoints(results)
+            sequence.append(keypoints)#math array numpy 
+            sequence = sequence[-30:]#اخر 30عنصر  
+            
+            if len(sequence) == 30:
+                #res = model.predict(np.expand_dims(sequence, axis=0))[0]
+                input=np.array(np.expand_dims(sequence, axis=0),dtype=np.float32)
+                interpreter.set_tensor(input_details[0]['index'],input )
+                interpreter.invoke()
+                res = interpreter.get_tensor(output_details[0]['index'])[0]
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                predictions.append(np.argmax(res))
+                image_1 = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format_RGB888)
+                label.setPixmap(QPixmap.fromImage(image_1))
+                if np.unique(predictions[-10:])[0]==np.argmax(res): 
+                    if res[np.argmax(res)] > threshold:     
+                        if len(sentence) > 0: 
+                            if actions[np.argmax(res)] != sentence[-1]:
+                                label_2.setText(actions[np.argmax(res)])
+                                
+                                sentence.append(actions[np.argmax(res)])    
+                        else:
+                        
+                            sentence.append(actions[np.argmax(res)])
+                if len(sentence) > 5: 
+                    sentence = sentence[-5:]   
+            image_1 = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format_RGB888)
+            label.setPixmap(QPixmap.fromImage(image_1))
             app.processEvents()
-            alarm_window.show()
-            '''
+            window.show()    
+           
+        
+def serial_thread():
+    while 1:
+        try:
+            #windows put="COM6"
+
+            ser=serial.Serial('COM6', 9600, timeout=1)
+            data =str(ser.readline())[2:-5]
+            print(data)
+            if 'i'in data:
+                label_alarm.setText("alarm")
+                app.processEvents()
+                alarm_window.show()
+            else:
+
+                mic_label.setText("noise level={} ".format(data))     
+                
 
        
-        
-     
+        except:
+            mic_label.setText("cant connect to serial devise  ")
+            #print("err")
+
+#t1 = threading.Thread(target=model_thread)
+t2 = threading.Thread(target=serial_thread)
+t2.start()  
+    # start threads
+#t1.start()
+with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+
+    while cap.isOpened():
         ret, frame = cap.read()
-       
+
 
         image, results = mediapipe_detection(frame, holistic)
         keypoints = extract_keypoints(results)
         sequence.append(keypoints)#math array numpy 
         sequence = sequence[-30:]#اخر 30عنصر  
-        #print(sequence)
+        
         if len(sequence) == 30:
             #res = model.predict(np.expand_dims(sequence, axis=0))[0]
             input=np.array(np.expand_dims(sequence, axis=0),dtype=np.float32)
@@ -163,7 +224,7 @@ with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=
                             
                             sentence.append(actions[np.argmax(res)])    
                     else:
-                       
+                    
                         sentence.append(actions[np.argmax(res)])
             if len(sentence) > 5: 
                 sentence = sentence[-5:]   
@@ -171,11 +232,4 @@ with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=
         label.setPixmap(QPixmap.fromImage(image_1))
         app.processEvents()
         window.show()    
-        mic_label.setText("noise level= ")    
         
-
-
-
-
-
-
