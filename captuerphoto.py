@@ -1,8 +1,8 @@
 import cv2
 import time
-
+import os
 font = cv2.FONT_HERSHEY_SIMPLEX
-  
+name=os.getlogin()
 # org
 org = (50, 50)
   
@@ -21,15 +21,22 @@ start_counting_img=0#to know how many imges you made
 words=["hello","thanks","sad","thirsty"]
 img_num=start_counting_img
 curent_time=int(time.time())
-
+path=os.path.join(r"C:\Users\{}\Desktop\images".format(name))
+#print(os.getcwd())
+try:
+  os.mkdir(path)
+except:
+  pass    
+os.chdir(path)
 while 1:
     remain=int(time.time())-curent_time
     ret,frame=cap.read()
     if ret:
-      
-        if remain-interval<=0:
+  #   \mohamed\Desktop\test_video
+        if interval-remain<=0:
             curent_time=int(time.time())
-            cv2.imwrite('{}{}.jpg'.format(words[word],img_num), frame)
+          #  print(path)
+            (cv2.imwrite('{}{}.jpg'.format(words[word],img_num), frame))
             img_num+=1
 
             if img_num>=25:
