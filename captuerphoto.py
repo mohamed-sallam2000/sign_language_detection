@@ -32,19 +32,20 @@ while 1:
             cv2.imwrite('{}{}.jpg'.format(words[word],img_num), frame)
             img_num+=1
 
-            if img_num>=50:
+            if img_num>=25:
                 img_num=0
                 word+=1
         image = cv2.putText(frame, 'word:{} {} will captuer after :{}'.format(words[word],img_num,(interval-remain)), org, font, 
                 fontScale, color, thickness, cv2.LINE_AA)
         cv2.imshow("data set maker",image)        
             
-
+    if word==4:
+      break
         
 
 
 
-    if cv2.waitKey(25) & 0xFF == ord('x'):#  ord(''): when user press space program pause
+    if cv2.waitKey(25) & 0xFF == ord('x'):#  ord(''): when user press x program exit
         break
 
     if cv2.waitKey(25) & 0xFF == 0x20:#  ord(''): when user press space program pause
